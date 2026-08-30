@@ -27,13 +27,17 @@ class PostData(BaseModel):
 @app.post("/post")
 def create_post(data: PostData):
     output = ""
-    if data.language.lower() == "python":
+    # Очищаємо назву мови від можливих пробілів та зводимо до нижнього регістру
+    lang = data.language.strip().lower()
+
+    if lang == "python":
         try:
             result = subprocess.run(["python3", "-c", data.code], capture_output=True, text=True, timeout=5)
             output = result.stdout if result.returncode == 0 else result.stderr
         except Exception as e:
             output = str(e)
-    elif data.language.lower() == "lua":
+            
+    elif lang == "lua":
         try:
             lua = LuaRuntime(unpack_returned_tuples=True)
             lua_logs = []
@@ -41,10 +45,10 @@ def create_post(data: PostData):
             def lua_print(*args):
                 lua_logs.append(" ".join(map(str, args)))
             
-            # Використовуємо globals() замість .g
             globals_env = lua.globals()
             globals_env['print'] = lua_print
             
+            # Виконуємо саме Lua-код
             lua.execute(data.code)
             output = "\n".join(lua_logs)
         except Exception as e:
