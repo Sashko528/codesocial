@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeSocial</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header>
+        <h2>CodeSocial 🐍🌙</h2>
+    </header>
+
+    <main>
+        <section class="create-post">
+            <input type="text" id="username" placeholder="Твоє ім'я">
+            
+            <select id="language">
+                <option value="python">Python</option>
+                <option value="lua">Lua</option>
+            </select>
+
+            <textarea id="code-input" placeholder="Напиши свій код тут..."></textarea>
+
+            <div class="toolbar">
+                <button id="btn-colon">:</button>
+                <button id="btn-open-bracket">(</button>
+                <button id="btn-close-bracket">)</button>
+                <button id="btn-tab">Tab</button>
+                <button id="btn-equals">=</button>
+                <button id="btn-quote">"</button>
+            </div>
+
+            <button id="send-btn">Опублікувати</button>
+        </section>
+
+        <section id="feed">
+            <h3>Стрічка дописів</h3>
+            <div id="posts-container"></div>
+        </section>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>

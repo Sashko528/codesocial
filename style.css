@@ -1,0 +1,69 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #1e1e2e;
+    color: #cdd6f4;
+    margin: 0;
+    padding: 10px;
+}
+
+header {
+    text-align: center;
+    border-bottom: 1px solid #45475a;
+}
+
+input, select, button {
+    width: 100%;
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 6px;
+    border: none;
+    background: #313244;
+    color: white;
+}
+
+.toolbar {
+    display: flex;
+    gap: 5px;
+    margin-top: 5px;
+    overflow-x: auto;
+}
+
+.toolbar button {
+    width: auto;
+    flex: 1;
+    background: #45475a;
+    font-weight: bold;
+}
+
+#send-btn {
+    background: #a6e3a1;
+    color: #11111b;
+    font-weight: bold;
+}
+
+.post-card {
+    background: #181825;
+    border: 1px solid #45475a;
+    padding: 12px;
+    border-radius: 8px;
+    margin-top: 15px;
+}
+
+.CodeMirror {
+    height: 150px;
+    border-radius: 6px;
+    margin-top: 10px;
+}
+
+textarea {
+    width: 100%;
+    height: 120px;
+    background: #181825;
+    color: #a6e3a1;
+    font-family: monospace;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #45475a;
+    margin-top: 10px;
+    box-sizing: border-box;
+}
