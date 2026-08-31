@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CodeSocial</title>
     <link rel="stylesheet" href="style.css">
+    <!-- Скрипт інтерактивного редактора -->
+    <script src="https://unpkg.com/codeflask/build/codeflask.min.js"></script>
 </head>
 <body>
 
@@ -21,7 +23,8 @@
                 <option value="lua">Lua</option>
             </select>
 
-            <textarea id="code-input" placeholder="Напиши свій код тут..."></textarea>
+            <!-- Блок редактора замість textarea -->
+            <div id="code-editor" style="height: 150px; border: 1px solid #45475a; border-radius: 8px; position: relative; margin-bottom: 10px; background: #1e1e2e;"></div>
 
             <div class="toolbar">
                 <button id="btn-colon">:</button>
