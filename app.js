@@ -1,9 +1,15 @@
 const SERVER_URL = "https://codesocial-backend.onrender.com";
 
-// Ініціалізація CodeFlask
+// Підключаємо Prism для розпізнавання слів Python/Lua у CodeFlask
 const flask = new CodeFlask('#code-editor', {
     language: 'js',
     lineNumbers: false
+});
+
+// Зміна підсвітки при зміні мови в дропдауні
+document.getElementById("language")?.addEventListener("change", (e) => {
+    const lang = e.target.value;
+    flask.setType(lang === "python" ? "python" : "lua");
 });
 
 // Автозакриття дужок і лапок під час вводу
