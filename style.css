@@ -56,4 +56,16 @@ button {
     font-size: 14px !important;
     z-index: 2 !important;
 }
+/* Підсвітка рядків у лапках для CodeFlask (Prism.js) */
+.codeflask .token.string {
+    color: #f9e2af !important; /* Помаранчево-жовтий колір для "значень" */
+}
+
+.codeflask .token.keyword {
+    color: #cba6f7 !important; /* Фіолетовий колір для if, then, else, end */
+}
+
+.codeflask .token.function {
+    color: #89b4fa !important; /* Синій колір для print, io.read */
+}
 
