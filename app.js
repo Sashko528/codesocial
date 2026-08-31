@@ -1,15 +1,54 @@
 const SERVER_URL = "https://codesocial-backend.onrender.com";
 
-// Ініціалізація редактора CodeFlask
+// Ініціалізація CodeFlask
 const flask = new CodeFlask('#code-editor', {
     language: 'js',
     lineNumbers: false
 });
 
-// Кнопки швидких символів
+// Автозакриття дужок і лапок під час вводу
+const editorArea = document.querySelector('#code-editor textarea');
+
+editorArea?.addEventListener("input", (e) => {
+    if (e.inputType === "insertText") {
+        const pairs = {
+            '(': ')',
+            '"': '"',
+            "'": "'",
+            '[': ']',
+            '{': '}'
+        };
+        
+        const char = e.data;
+        if (pairs[char]) {
+            const start = editorArea.selectionStart;
+            const end = editorArea.selectionEnd;
+            const text = flask.getCode();
+
+            const updatedText = text.substring(0, start) + pairs[char] + text.substring(end);
+            flask.updateCode(updatedText);
+            
+            // Повертаємо курсор між дужками/лапками
+            setTimeout(() => {
+                editorArea.selectionStart = editorArea.selectionEnd = start;
+            }, 0);
+        }
+    }
+});
+
+// Кнопки швидкого вводу
 function insertSymbol(symbol) {
-    const currentCode = flask.getCode();
-    flask.updateCode(currentCode + symbol);
+    const text = flask.getCode();
+    const start = editorArea.selectionStart || text.length;
+    const end = editorArea.selectionEnd || text.length;
+    
+    const updatedText = text.substring(0, start) + symbol + text.substring(end);
+    flask.updateCode(updatedText);
+    
+    setTimeout(() => {
+        editorArea.focus();
+        editorArea.selectionStart = editorArea.selectionEnd = start + symbol.length;
+    }, 0);
 }
 
 document.getElementById("btn-colon")?.addEventListener("click", () => insertSymbol(":"));
@@ -19,7 +58,7 @@ document.getElementById("btn-tab")?.addEventListener("click", () => insertSymbol
 document.getElementById("btn-equals")?.addEventListener("click", () => insertSymbol("="));
 document.getElementById("btn-quote")?.addEventListener("click", () => insertSymbol('"'));
 
-// Завантаження дописів у стрічку
+// Завантаження дописів
 async function loadPosts() {
     const container = document.getElementById("posts-container");
     if (!container) return;
@@ -56,7 +95,7 @@ function escapeHtml(text) {
         .replace(/'/g, "&#039;");
 }
 
-// Надсилання допису
+// Публікація
 document.getElementById("send-btn")?.addEventListener("click", async () => {
     const username = document.getElementById("username").value.trim() || "Анонім";
     const language = document.getElementById("language").value;
@@ -92,7 +131,6 @@ document.getElementById("send-btn")?.addEventListener("click", async () => {
     }
 });
 
-// Збереження ім'я користувача
 const savedUser = localStorage.getItem('username');
 if (savedUser && document.getElementById("username")) {
     document.getElementById("username").value = savedUser;
