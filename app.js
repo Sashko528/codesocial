@@ -1,3 +1,20 @@
+const SERVER_URL = "https://твій-сервер.onrender.com"; // Вкажи своє посилання на Render
+
+// 1. Створюємо редактор CodeFlask
+const flask = new CodeFlask('#code-editor', {
+    language: 'python',
+    lineNumbers: false
+});
+
+// 2. Примусово відкриваємо клавіатуру при натисканні на редактор
+document.getElementById('code-editor')?.addEventListener('click', () => {
+    const textarea = document.querySelector('.codeflask__textarea');
+    if (textarea) {
+        textarea.focus();
+    }
+});
+
+// 3. Завантаження та відображення дописів у стрічці
 async function loadPosts() {
     const container = document.getElementById("posts-container");
     if (!container) return;
@@ -14,27 +31,43 @@ async function loadPosts() {
         }
 
         container.innerHTML = posts.map(p => {
-    const username = escapeHtml(p[0]);
-    const lang = escapeHtml(p[1]);
-    const code = escapeHtml(p[2]);
-    const output = p[3];
-    const hasInput = p[4] === 1;
+            const username = escapeHtml(p[0]);
+            const lang = escapeHtml(p[1]);
+            const code = escapeHtml(p[2]);
+            const output = p[3];
+            const hasInput = p[4] === 1;
 
-    return `
-        <div class="post-card" style="background: #181825; border: 1px solid #45475a; padding: 12px; border-radius: 8px; margin-top: 15px;">
-            <h4 style="margin: 0 0 8px 0; color: #cdd6f4;">${username} <span style="color: #cba6f7;">(${lang})</span></h4>
-            <pre style="background: #1e1e2e; padding: 10px; border-radius: 6px; overflow-x: auto; margin: 0;"><code>${output}</code></pre>
-            ${hasInput ? `
-                <div style="margin-top: 10px; display: flex; gap: 8px;">
-                    <input type="text" placeholder="Введіть значення..." style="flex: 1; margin: 0;">
-                    <button onclick="alert('Введене значення прийнято!')" style="margin: 0;">Надіслати</button>
+            return `
+                <div class="post-card" style="background: #181825; border: 1px solid #45475a; padding: 12px; border-radius: 8px; margin-top: 15px;">
+                    <h4 style="margin: 0 0 8px 0; color: #cdd6f4;">${username} <span style="color: #cba6f7;">(${lang})</span></h4>
+                    <pre style="background: #1e1e2e; padding: 10px; border-radius: 6px; overflow-x: auto; margin: 0;"><code>${output}</code></pre>
+                    ${hasInput ? `
+                        <div style="margin-top: 10px; display: flex; gap: 8px;">
+                            <input type="text" placeholder="Введіть значення..." style="flex: 1; margin: 0;">
+                            <button onclick="alert('Введене значення прийнято!')" style="margin: 0;">Надіслати</button>
+                        </div>
+                    ` : ''}
                 </div>
-            ` : ''}
-        </div>
-    `;
-}).join('');
+            `;
+        }).join('');
 
     } catch (e) {
         console.error("Помилка завантаження дописів:", e);
     }
 }
+
+// Функція для захисту від спецсимволів (XSS)
+function escapeHtml(text) {
+    if (!text) return "";
+    return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+// Завантажуємо дописи при відкритті сторінки
+document.addEventListener("DOMContentLoaded", () => {
+    loadPosts();
+});
