@@ -1,4 +1,4 @@
-const SERVER_URL = "https://твій-сервер.onrender.com"; 
+const SERVER_URL = "https://codesocial-backend.onrender.com";
 
 // 1. Створюємо редактор CodeFlask
 const flask = new CodeFlask('#code-editor', {
