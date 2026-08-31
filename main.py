@@ -1,146 +1,122 @@
-import time
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import subprocess
-import sqlite3
-from lupa import LuaRuntime
+import sys
+import io
+from lualib import LuaRuntime
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-conn = sqlite3.connect("social.db", check_same_thread=False)
-cursor = conn.cursor()
+posts_db = []
 
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS posts (
-    id INTEGER PRIMARY KEY AUTOINCREMENT, 
-    username TEXT, 
-    lang TEXT, 
-    code TEXT, 
-    output TEXT,
-    has_input INTEGER DEFAULT 0
-)
-""")
-conn.commit()
-
-class PostData(BaseModel):
+class PostCreate(BaseModel):
     username: str
-    language: str
     code: str
+    lang: str
+    user_inputs: list[str] = []  # Масив введених користувачем даних
 
-@app.post("/post")
-def create_post(data: PostData):
-    output = ""
-    lang = data.language.strip().lower()
-    has_input = 0
+class RunRequest(BaseModel):
+    code: str
+    lang: str
+    user_inputs: list[str] = []
 
-    if "input(" in data.code or "io.read(" in data.code or "io.read()" in data.code:
-        has_input = 1
+def execute_python_code(code: str, inputs: list[str]) -> str:
+    input_index = 0
 
-    if lang == "python":
-        try:
-            py_code = (
-                "import time\n"
-                "current_color = '#a6e3a1'\n"
-                "current_bg = 'transparent'\n"
-                "is_bold = False\n"
-                "logs = []\n\n"
-                "def color(c):\n"
-                "    global current_color\n"
-                "    current_color = c\n\n"
-                "def bg_color(c):\n"
-                "    global current_bg\n"
-                "    current_bg = c\n\n"
-                "def bold(state=True):\n"
-                "    global is_bold\n"
-                "    is_bold = state\n\n"
-                "def clear():\n"
-                "    global logs\n"
-                "    logs = []\n\n"
-                "def wait(s):\n"
-                "    time.sleep(min(s, 3))\n\n"
-                "def custom_print(*args):\n"
-                "    text = ' '.join(map(str, args))\n"
-                "    weight = 'bold' if is_bold else 'normal'\n"
-                "    logs.append(f'<span style=\"color: {current_color}; background-color: {current_bg}; font-weight: {weight};\">{text}</span>')\n\n"
-                "def custom_input(prompt=''):\n"
-                "    if prompt: custom_print(prompt)\n"
-                "    return '[Очікує вводу...]'\n\n"
-                "print = custom_print\n"
-                "input = custom_input\n\n"
-            ) + data.code + "\nbuiltins_print = print\nimport builtins\nbuiltins.print('\\n'.join(logs))"
+    def custom_input(prompt=""):
+        nonlocal input_index
+        if prompt:
+            print(prompt, end="")
+        if input_index < len(inputs):
+            val = inputs[input_index]
+            input_index += 1
+            print(val) # Виводимо введене значення в консоль для наочності
+            return val
+        return '[Очікує вводу...]'
 
-            result = subprocess.run(["python3", "-c", py_code], capture_output=True, text=True, timeout=5)
-            output = result.stdout if result.returncode == 0 else result.stderr
-        except Exception as e:
-            output = str(e)
-            
-    elif lang == "lua":
-        try:
-            lua = LuaRuntime(unpack_returned_tuples=True)
-            lua_logs = []
-            current_color = "#a6e3a1"
-            current_bg = "transparent"
-            is_bold = False
-            
-            def lua_color(c):
-                nonlocal current_color
-                current_color = str(c)
+    old_stdout = sys.stdout
+    redirected_output = sys.stdout = io.StringIO()
 
-            def lua_bg_color(c):
-                nonlocal current_bg
-                current_bg = str(c)
+    # Перехоплюємо стандартний input
+    safe_globals = {
+        "__builtins__": __builtins__,
+        "input": custom_input
+    }
 
-            def lua_bold(state):
-                nonlocal is_bold
-                is_bold = bool(state) if state is not None else True
+    try:
+        exec(code, safe_globals)
+        output = redirected_output.getvalue()
+    except Exception as e:
+        output = f"Помилка виконання Python: {e}"
+    finally:
+        sys.stdout = old_stdout
 
-            def lua_clear():
-                nonlocal lua_logs
-                lua_logs.clear()
+    return output
 
-            def lua_wait(s):
-                time.sleep(min(float(s or 0), 3))
+def execute_lua_code(code: str, inputs: list[str]) -> str:
+    lua = LuaRuntime(unpack_returned_tuples=True)
+    logs = []
+    input_index = 0
 
-            def lua_print(*args):
-                text = " ".join(map(str, args))
-                weight = "bold" if is_bold else "normal"
-                lua_logs.append(f'<span style="color: {current_color}; background-color: {current_bg}; font-weight: {weight};">{text}</span>')
+    def lua_print(*args):
+        logs.append(" ".join(str(a) for a in args))
 
-            def lua_read():
-                return "[Очікує вводу...]"
+    def lua_read():
+        nonlocal input_index
+        if input_index < len(inputs):
+            val = inputs[input_index]
+            input_index += 1
+            logs.append(val)
+            return val
+        return '[Очікує вводу...]'
 
-            globals_env = lua.globals()
-            globals_env['print'] = lua_print
-            globals_env['color'] = lua_color
-            globals_env['bg_color'] = lua_bg_color
-            globals_env['bold'] = lua_bold
-            globals_env['clear'] = lua_clear
-            globals_env['wait'] = lua_wait
-            
-            lua.execute("io = io or {}; io.read = function() return '[Очікує вводу...]' end")
+    lua.globals()['print'] = lua_print
+    lua.globals()['io'] = lua.table(read=lua_read)
 
-            lua.execute(data.code)
-            output = "\n".join(lua_logs)
-        except Exception as e:
-            output = f"Lua error: {str(e)}"
+    try:
+        lua.execute(code)
+        return "\n".join(logs)
+    except Exception as e:
+        return f"Помилка виконання Lua: {e}"
 
-    if not output.strip():
-        output = "(Код виконано без виводу)"
+@app.post("/posts")
+def create_post(post: PostCreate):
+    if post.lang == "python":
+        output = execute_python_code(post.code, post.user_inputs)
+    elif post.lang == "lua":
+        output = execute_lua_code(post.code, post.user_inputs)
+    else:
+        output = "Непідтримувана мова"
 
-    cursor.execute("INSERT INTO posts (username, lang, code, output, has_input) VALUES (?, ?, ?, ?, ?)", 
-                   (data.username, data.language, data.code, output, has_input))
-    conn.commit()
-    return {"status": "ok"}
+    new_post = {
+        "id": len(posts_db) + 1,
+        "username": post.username,
+        "code": post.code,
+        "lang": post.lang,
+        "output": output,
+        "user_inputs": post.user_inputs
+    }
+    posts_db.insert(0, new_post)
+    return new_post
 
 @app.get("/posts")
 def get_posts():
-    cursor.execute("SELECT username, lang, code, output, has_input FROM posts ORDER BY id DESC")
-    return cursor.fetchall()
+    return posts_db
+
+@app.post("/run")
+def run_code(req: RunRequest):
+    if req.lang == "python":
+        output = execute_python_code(req.code, req.user_inputs)
+    elif req.lang == "lua":
+        output = execute_lua_code(req.code, req.user_inputs)
+    else:
+        output = "Непідтримувана мова"
+    return {"output": output}
