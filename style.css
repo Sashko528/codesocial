@@ -36,6 +36,15 @@ button {
     border-radius: 8px;
 }
 
+/* Примусово робимо ВЕСЬ текст у редакторі жирним (і шар вводу, і шар з кольором) */
+.codeflask code, 
+.codeflask .codeflask__textarea,
+.codeflask .codeflask__code {
+    font-family: monospace !important;
+    font-weight: 700 !important;
+    font-size: 14px !important;
+}
+
 .codeflask .codeflask__textarea {
     color: transparent !important;
     caret-color: #ffffff !important;
@@ -46,10 +55,10 @@ button {
     color: #ff9e3b !important;
 }
 
-/* 2. Ключові слова (def, function, if, elif, elseif, else) — темно-сині та жирні */
-.codeflask .token.keyword {
+/* 2. Ключові слова (def, function, if, elif, elseif, else) — темно-сині */
+.codeflask .token.keyword,
+.codeflask .token.builtin {
     color: #1e66f5 !important;
-    font-weight: 900 !important;
 }
 
 /* 3. Усі інші слова та змінні (name = user, print) — білі */
