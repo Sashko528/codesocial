@@ -4,7 +4,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import subprocess
 import sqlite3
-import re
 from lupa import LuaRuntime
 
 app = FastAPI()
@@ -42,7 +41,6 @@ def create_post(data: PostData):
     lang = data.language.strip().lower()
     has_input = 0
 
-    # Перевірка на наявність вводу в коді
     if "input(" in data.code or "io.read(" in data.code or "io.read()" in data.code:
         has_input = 1
 
@@ -127,7 +125,6 @@ def create_post(data: PostData):
             globals_env['clear'] = lua_clear
             globals_env['wait'] = lua_wait
             
-            # Мок для io.read
             lua.execute("io = io or {}; io.read = function() return '[Очікує вводу...]' end")
 
             lua.execute(data.code)
