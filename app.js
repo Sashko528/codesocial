@@ -1,4 +1,4 @@
-const API_URL = "http://127.0.0.1:8000"; // заніми на свою адресу сервера при потребі
+const API_URL = "https://codesocial-backend.onrender.com"; 
 
 // Зберігаємо введені користувачем значення для кожної публікації за ID
 const postInputsStore = {};
