@@ -5,9 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CodeSocial</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Бібліотека підсвітки CodeFlask -->
-    <script 
-src="https://unpkg.com/codeflask/build/codeflask.min.js"></script>
+    <!-- Підключаємо CodeFlask та Prism для підтримки Python і Lua -->
+    <script src="https://unpkg.com/codeflask/build/codeflask.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-lua.min.js"></script>
 </head>
 <body>
 
@@ -24,7 +26,7 @@ src="https://unpkg.com/codeflask/build/codeflask.min.js"></script>
                 <option value="lua">Lua</option>
             </select>
 
-            <div id="code-editor" style="height: 150px; border: 1px solid #45475a; border-radius: 8px; position: relative; margin-bottom: 10px; background: #1e1e2e;"></div>
+            <div id="code-editor" style="height: 150px; border: 1px solid #45475a; border-radius: 8px; position: relative; margin-bottom: 10px; background: #181825;"></div>
 
             <div class="toolbar">
                 <button id="btn-colon">:</button>
