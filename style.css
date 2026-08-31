@@ -30,42 +30,30 @@ button {
     margin-top: 10px;
 }
 
-/* Налаштування підсвітки коду в редакторі */
+/* Налаштування редактора CodeFlask */
 .codeflask {
     background: #181825 !important;
     border-radius: 8px;
+    position: relative;
+    cursor: text;
 }
 
-/* Примусово робимо ВЕСЬ текст у редакторі жирним (і шар вводу, і шар з кольором) */
-.codeflask code, 
-.codeflask .codeflask__textarea,
-.codeflask .codeflask__code {
+/* Примусово робимо прихований textarea активним для кліку та клавіатури */
+.codeflask .codeflask__textarea {
+    color: transparent !important;
+    caret-color: #ffffff !important;
+    z-index: 3 !important; /* Ставимо шар вводу поверх усього */
+    pointer-events: auto !important;
     font-family: monospace !important;
     font-weight: 700 !important;
     font-size: 14px !important;
 }
 
-.codeflask .codeflask__textarea {
-    color: transparent !important;
-    caret-color: #ffffff !important;
-}
-
-/* 1. Лапки та текст у лапках — помаранчевий */
-.codeflask .token.string {
-    color: #ff9e3b !important;
-}
-
-/* 2. Ключові слова (def, function, if, elif, elseif, else) — темно-сині */
-.codeflask .token.keyword,
-.codeflask .token.builtin {
-    color: #1e66f5 !important;
-}
-
-/* 3. Усі інші слова та змінні (name = user, print) — білі */
-.codeflask .token.operator, 
-.codeflask .token.punctuation,
-.codeflask .token.variable,
-.codeflask .token.function,
+.codeflask code, 
 .codeflask .codeflask__code {
-    color: #ffffff !important;
+    font-family: monospace !important;
+    font-weight: 700 !important;
+    font-size: 14px !important;
+    z-index: 2 !important;
 }
+
