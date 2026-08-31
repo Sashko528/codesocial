@@ -1,10 +1,10 @@
+import time
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import subprocess
 import sqlite3
-import uuid
-from datetime import datetime, timedelta
+import re
 from lupa import LuaRuntime
 
 app = FastAPI()
@@ -25,25 +25,8 @@ CREATE TABLE IF NOT EXISTS posts (
     username TEXT, 
     lang TEXT, 
     code TEXT, 
-    output TEXT
-)
-""")
-
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS invites (
-    code TEXT PRIMARY KEY,
-    creator TEXT,
-    type TEXT,
-    created_at TIMESTAMP
-)
-""")
-
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS user_relations (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user TEXT,
-    target TEXT,
-    type TEXT
+    output TEXT,
+    has_input INTEGER DEFAULT 0
 )
 """)
 conn.commit()
@@ -53,27 +36,48 @@ class PostData(BaseModel):
     language: str
     code: str
 
-class InviteUseData(BaseModel):
-    username: str
-    code: str
-
 @app.post("/post")
 def create_post(data: PostData):
     output = ""
     lang = data.language.strip().lower()
+    has_input = 0
+
+    # Перевірка на наявність вводу в коді
+    if "input(" in data.code or "io.read(" in data.code or "io.read()" in data.code:
+        has_input = 1
 
     if lang == "python":
         try:
             py_code = (
+                "import time\n"
                 "current_color = '#a6e3a1'\n"
+                "current_bg = 'transparent'\n"
+                "is_bold = False\n"
+                "logs = []\n\n"
                 "def color(c):\n"
                 "    global current_color\n"
-                "    current_color = c\n"
-                "def print(*args):\n"
-                "    import builtins\n"
+                "    current_color = c\n\n"
+                "def bg_color(c):\n"
+                "    global current_bg\n"
+                "    current_bg = c\n\n"
+                "def bold(state=True):\n"
+                "    global is_bold\n"
+                "    is_bold = state\n\n"
+                "def clear():\n"
+                "    global logs\n"
+                "    logs = []\n\n"
+                "def wait(s):\n"
+                "    time.sleep(min(s, 3))\n\n"
+                "def custom_print(*args):\n"
                 "    text = ' '.join(map(str, args))\n"
-                "    builtins.print(f'<span style=\"color: {current_color};\">{text}</span>')\n\n"
-            ) + data.code
+                "    weight = 'bold' if is_bold else 'normal'\n"
+                "    logs.append(f'<span style=\"color: {current_color}; background-color: {current_bg}; font-weight: {weight};\">{text}</span>')\n\n"
+                "def custom_input(prompt=''):\n"
+                "    if prompt: custom_print(prompt)\n"
+                "    return '[Очікує вводу...]'\n\n"
+                "print = custom_print\n"
+                "input = custom_input\n\n"
+            ) + data.code + "\nbuiltins_print = print\nimport builtins\nbuiltins.print('\\n'.join(logs))"
 
             result = subprocess.run(["python3", "-c", py_code], capture_output=True, text=True, timeout=5)
             output = result.stdout if result.returncode == 0 else result.stderr
@@ -85,19 +89,47 @@ def create_post(data: PostData):
             lua = LuaRuntime(unpack_returned_tuples=True)
             lua_logs = []
             current_color = "#a6e3a1"
+            current_bg = "transparent"
+            is_bold = False
             
-            def lua_print(*args):
-                text = " ".join(map(str, args))
-                lua_logs.append(f'<span style="color: {current_color};">{text}</span>')
-                
             def lua_color(c):
                 nonlocal current_color
                 current_color = str(c)
-                
+
+            def lua_bg_color(c):
+                nonlocal current_bg
+                current_bg = str(c)
+
+            def lua_bold(state):
+                nonlocal is_bold
+                is_bold = bool(state) if state is not None else True
+
+            def lua_clear():
+                nonlocal lua_logs
+                lua_logs.clear()
+
+            def lua_wait(s):
+                time.sleep(min(float(s or 0), 3))
+
+            def lua_print(*args):
+                text = " ".join(map(str, args))
+                weight = "bold" if is_bold else "normal"
+                lua_logs.append(f'<span style="color: {current_color}; background-color: {current_bg}; font-weight: {weight};">{text}</span>')
+
+            def lua_read():
+                return "[Очікує вводу...]"
+
             globals_env = lua.globals()
             globals_env['print'] = lua_print
             globals_env['color'] = lua_color
+            globals_env['bg_color'] = lua_bg_color
+            globals_env['bold'] = lua_bold
+            globals_env['clear'] = lua_clear
+            globals_env['wait'] = lua_wait
             
+            # Мок для io.read
+            lua.execute("io = io or {}; io.read = function() return '[Очікує вводу...]' end")
+
             lua.execute(data.code)
             output = "\n".join(lua_logs)
         except Exception as e:
@@ -106,58 +138,12 @@ def create_post(data: PostData):
     if not output.strip():
         output = "(Код виконано без виводу)"
 
-    cursor.execute("INSERT INTO posts (username, lang, code, output) VALUES (?, ?, ?, ?)", 
-                   (data.username, data.language, data.code, output))
+    cursor.execute("INSERT INTO posts (username, lang, code, output, has_input) VALUES (?, ?, ?, ?, ?)", 
+                   (data.username, data.language, data.code, output, has_input))
     conn.commit()
     return {"status": "ok"}
 
 @app.get("/posts")
 def get_posts():
-    cursor.execute("SELECT username, lang, code, output FROM posts ORDER BY id DESC")
+    cursor.execute("SELECT username, lang, code, output, has_input FROM posts ORDER BY id DESC")
     return cursor.fetchall()
-
-@app.post("/create-invite")
-def create_invite(username: str, invite_type: str):
-    cursor.execute(
-        "SELECT created_at FROM invites WHERE creator = ? AND type = ? ORDER BY created_at DESC LIMIT 1",
-        (username, invite_type)
-    )
-    last_invite = cursor.fetchone()
-    
-    if last_invite:
-        last_time = datetime.fromisoformat(last_invite[0])
-        if datetime.now() - last_time < timedelta(hours=24):
-            time_left = timedelta(hours=24) - (datetime.now() - last_time)
-            hours_left = int(time_left.total_seconds() // 3600)
-            return {"status": "error", "message": f"Посилання можна створювати 1 раз на 24 години! Зачекай ще ~{hours_left} год."}
-
-    invite_code = str(uuid.uuid4())[:8]
-    cursor.execute(
-        "INSERT INTO invites (code, creator, type, created_at) VALUES (?, ?, ?, ?)",
-        (invite_code, username, invite_type, datetime.now().isoformat())
-    )
-    conn.commit()
-    return {"status": "ok", "code": invite_code}
-
-@app.post("/use-invite")
-def use_invite(data: InviteUseData):
-    cursor.execute("SELECT creator, type FROM invites WHERE code = ?", (data.code,))
-    invite = cursor.fetchone()
-    
-    if not invite:
-        return {"status": "error", "message": "Таке посилання не існує!"}
-        
-    creator, invite_type = invite
-    if creator == data.username:
-        return {"status": "error", "message": "Це твоє власне посилання!"}
-
-    cursor.execute("SELECT id FROM user_relations WHERE user = ? AND target = ? AND type = ?", 
-                   (data.username, creator, invite_type))
-    if cursor.fetchone():
-        return {"status": "error", "message": f"Ти вже перебуваєш у зв'язку з {creator} ({invite_type})!"}
-
-    cursor.execute("INSERT INTO user_relations (user, target, type) VALUES (?, ?, ?)", (data.username, creator, invite_type))
-    cursor.execute("INSERT INTO user_relations (user, target, type) VALUES (?, ?, ?)", (creator, data.username, invite_type))
-    conn.commit()
-    
-    return {"status": "ok", "message": f"Успішно додано {invite_type}: {creator}"}
