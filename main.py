@@ -19,7 +19,6 @@ app.add_middleware(
 conn = sqlite3.connect("social.db", check_same_thread=False)
 cursor = conn.cursor()
 
-# Таблиця дописів
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS posts (
     id INTEGER PRIMARY KEY AUTOINCREMENT, 
@@ -30,7 +29,6 @@ CREATE TABLE IF NOT EXISTS posts (
 )
 """)
 
-# Таблиця унікальних посилань
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS invites (
     code TEXT PRIMARY KEY,
@@ -40,7 +38,6 @@ CREATE TABLE IF NOT EXISTS invites (
 )
 """)
 
-# Таблиця контактів та груп
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS user_relations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
