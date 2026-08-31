@@ -9,7 +9,7 @@ async function loadPosts() {
         const posts = await res.json();
         
         if (posts.length === 0) {
-            container.innerHTML = "<p style='color: #a6adc8;'>Поки немає дописів. Будь першим!</p>";
+            container.innerHTML = "<p style='color: #a6adc8;'>Поки немає дописів.</p>";
             return;
         }
 
