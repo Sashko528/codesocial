@@ -1,46 +1,15 @@
 const SERVER_URL = "https://codesocial-backend.onrender.com";
 
-const textarea = document.getElementById("code-input");
-
-// Автозакриття дужок та зміна кольору в полі вводу наживо
-textarea?.addEventListener("input", (e) => {
-    if (e.inputType === "insertText") {
-        const pairs = {
-            '(': ')',
-            '"': '"',
-            "'": "'",
-            '[': ']',
-            '{': '}'
-        };
-        
-        const char = e.data;
-        if (pairs[char]) {
-            const start = textarea.selectionStart;
-            const end = textarea.selectionEnd;
-            const text = textarea.value;
-
-            textarea.value = text.substring(0, start) + pairs[char] + text.substring(end);
-            textarea.selectionStart = textarea.selectionEnd = start;
-        }
-    }
-
-    const match = textarea.value.match(/color\((['"])(.*?)\1\)/);
-    if (match && match[2]) {
-        textarea.style.color = match[2];
-    } else {
-        textarea.style.color = "#a6e3a1";
-    }
+// Ініціалізація редактора CodeFlask
+const flask = new CodeFlask('#code-editor', {
+    language: 'js',
+    lineNumbers: false
 });
 
+// Кнопки швидких символів
 function insertSymbol(symbol) {
-    if (!textarea) return;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const text = textarea.value;
-
-    textarea.value = text.substring(0, start) + symbol + text.substring(end);
-    textarea.selectionStart = textarea.selectionEnd = start + symbol.length;
-    textarea.focus();
+    const currentCode = flask.getCode();
+    flask.updateCode(currentCode + symbol);
 }
 
 document.getElementById("btn-colon")?.addEventListener("click", () => insertSymbol(":"));
@@ -50,6 +19,7 @@ document.getElementById("btn-tab")?.addEventListener("click", () => insertSymbol
 document.getElementById("btn-equals")?.addEventListener("click", () => insertSymbol("="));
 document.getElementById("btn-quote")?.addEventListener("click", () => insertSymbol('"'));
 
+// Завантаження дописів у стрічку
 async function loadPosts() {
     const container = document.getElementById("posts-container");
     if (!container) return;
@@ -86,10 +56,11 @@ function escapeHtml(text) {
         .replace(/'/g, "&#039;");
 }
 
+// Надсилання допису
 document.getElementById("send-btn")?.addEventListener("click", async () => {
     const username = document.getElementById("username").value.trim() || "Анонім";
     const language = document.getElementById("language").value;
-    const code = textarea.value.trim();
+    const code = flask.getCode().trim();
     const sendBtn = document.getElementById("send-btn");
 
     if (!code) {
@@ -108,8 +79,7 @@ document.getElementById("send-btn")?.addEventListener("click", async () => {
         });
 
         if (res.ok) {
-            textarea.value = "";
-            textarea.style.color = "#a6e3a1";
+            flask.updateCode("");
             await loadPosts();
         } else {
             alert("Помилка при відправці на сервер!");
@@ -122,59 +92,7 @@ document.getElementById("send-btn")?.addEventListener("click", async () => {
     }
 });
 
-async function checkInviteLink() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const inviteCode = urlParams.get('invite');
-    
-    if (inviteCode) {
-        let myName = localStorage.getItem('username');
-        if (!myName) {
-            myName = prompt("Введи своє ім'я, щоб активувати посилання-запрошення:");
-            if (myName) localStorage.setItem('username', myName);
-        }
-
-        if (myName) {
-            try {
-                const res = await fetch(`${SERVER_URL}/use-invite`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ username: myName, code: inviteCode })
-                });
-                const data = await res.json();
-                alert(data.message);
-            } catch (e) {
-                alert("Помилка активації посилання.");
-            }
-            window.history.replaceState({}, document.title, window.location.pathname);
-        }
-    }
-}
-
-async function createInvite(type) {
-    const username = document.getElementById("username").value.trim();
-    if (!username) {
-        alert("Введи своє ім'я перед створенням посилання!");
-        return;
-    }
-
-    try {
-        const res = await fetch(`${SERVER_URL}/create-invite?username=${encodeURIComponent(username)}&invite_type=${type}`, {
-            method: "POST"
-        });
-        const data = await res.json();
-
-        if (data.status === "ok") {
-            const link = `${window.location.origin}${window.location.pathname}?invite=${data.code}`;
-            navigator.clipboard.writeText(link);
-            alert(`Успішно! Посилання для ${type === 'contact' ? 'контакту' : 'групи'} скопійовано:\n${link}`);
-        } else {
-            alert(data.message);
-        }
-    } catch (e) {
-        alert("Помилка під час з'єднання з сервером.");
-    }
-}
-
+// Збереження ім'я користувача
 const savedUser = localStorage.getItem('username');
 if (savedUser && document.getElementById("username")) {
     document.getElementById("username").value = savedUser;
@@ -183,5 +101,4 @@ document.getElementById("username")?.addEventListener("change", (e) => {
     localStorage.setItem('username', e.target.value.trim());
 });
 
-checkInviteLink();
 loadPosts();
