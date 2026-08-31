@@ -1,4 +1,4 @@
-const SERVER_URL = "https://codesocial-backend.onrender.com"; // Переконайся, що тут вказано твій URL
+const SERVER_URL = "https://твій-сервер.onrender.com"; 
 
 // 1. Створюємо редактор CodeFlask
 const flask = new CodeFlask('#code-editor', {
@@ -6,21 +6,19 @@ const flask = new CodeFlask('#code-editor', {
     lineNumbers: false
 });
 
-// Перемикання мови підсвітки (Python / Lua)
+// Перемикання мови підсвітки
 document.getElementById("language")?.addEventListener("change", (e) => {
     const lang = e.target.value;
     flask.setType(lang === "python" ? "python" : "lua");
 });
 
-// 2. Примусово відкриваємо клавіатуру при натисканні на редактор
+// 2. Фокус клавіатури на мобільних
 document.getElementById('code-editor')?.addEventListener('click', () => {
     const textarea = document.querySelector('.codeflask__textarea');
-    if (textarea) {
-        textarea.focus();
-    }
+    if (textarea) textarea.focus();
 });
 
-// 3. Автозакриття дужок і лапок під час вводу
+// 3. Автозакриття дужок і лапок
 const getEditorTextarea = () => document.querySelector('#code-editor textarea');
 
 document.getElementById('code-editor')?.addEventListener("input", (e) => {
@@ -46,7 +44,7 @@ document.getElementById('code-editor')?.addEventListener("input", (e) => {
     }
 });
 
-// 4. Логіка для кнопок швидкого вводу (тулбар)
+// 4. Тулбар кнопок
 function insertSymbol(symbol) {
     const textarea = getEditorTextarea();
     const text = flask.getCode();
@@ -71,7 +69,7 @@ document.getElementById("btn-tab")?.addEventListener("click", () => insertSymbol
 document.getElementById("btn-equals")?.addEventListener("click", () => insertSymbol("="));
 document.getElementById("btn-quote")?.addEventListener("click", () => insertSymbol('"'));
 
-// 5. Функція відправки допису (Кнопка "Опублікувати")
+// 5. Відправка допису на сервер
 document.getElementById("send-btn")?.addEventListener("click", async () => {
     const username = document.getElementById("username").value.trim() || "Анонім";
     const language = document.getElementById("language").value;
@@ -108,7 +106,7 @@ document.getElementById("send-btn")?.addEventListener("click", async () => {
     }
 });
 
-// 6. Завантаження та відображення дописів у стрічці
+// 6. Завантаження та вивід дописів
 async function loadPosts() {
     const container = document.getElementById("posts-container");
     if (!container) return;
@@ -124,21 +122,20 @@ async function loadPosts() {
             return;
         }
 
-        container.innerHTML = posts.map(p => {
+        container.innerHTML = posts.map((p, index) => {
             const username = escapeHtml(p[0]);
             const lang = escapeHtml(p[1]);
-            const code = escapeHtml(p[2]);
             const output = p[3];
             const hasInput = p[4] === 1;
 
             return `
                 <div class="post-card" style="background: #181825; border: 1px solid #45475a; padding: 12px; border-radius: 8px; margin-top: 15px;">
                     <h4 style="margin: 0 0 8px 0; color: #cdd6f4;">${username} <span style="color: #cba6f7;">(${lang})</span></h4>
-                    <pre style="background: #1e1e2e; padding: 10px; border-radius: 6px; overflow-x: auto; margin: 0;"><code>${output}</code></pre>
+                    <pre style="background: #1e1e2e; padding: 10px; border-radius: 6px; overflow-x: auto; margin: 0;"><code id="out-${index}">${output}</code></pre>
                     ${hasInput ? `
-                        <div style="margin-top: 10px; display: flex; gap: 8px;">
-                            <input type="text" placeholder="Введіть значення..." style="flex: 1; margin: 0;">
-                            <button onclick="alert('Введене значення прийнято!')" style="margin: 0;">Надіслати</button>
+                        <div style="margin-top: 10px; display: flex; gap: 8px;" id="input-box-${index}">
+                            <input type="text" id="val-${index}" placeholder="Введіть значення..." style="flex: 1; margin: 0;">
+                            <button onclick="sendInputValue(${index})" style="margin: 0;">Надіслати</button>
                         </div>
                     ` : ''}
                 </div>
@@ -147,6 +144,23 @@ async function loadPosts() {
 
     } catch (e) {
         console.error("Помилка завантаження дописів:", e);
+    }
+}
+
+// Плавна заміна [Очікує вводу...] без alert
+function sendInputValue(index) {
+    const inputField = document.getElementById(`val-${index}`);
+    const outputCode = document.getElementById(`out-${index}`);
+    const inputBox = document.getElementById(`input-box-${index}`);
+
+    if (inputField && outputCode && inputField.value.trim() !== "") {
+        const userText = escapeHtml(inputField.value.trim());
+        outputCode.innerHTML = outputCode.innerHTML.replace(
+            '[Очікує вводу...]', 
+            `<span style="color: #a6e3a1; font-weight: bold;">${userText}</span>`
+        );
+
+        if (inputBox) inputBox.style.display = 'none';
     }
 }
 
@@ -161,7 +175,7 @@ function escapeHtml(text) {
         .replace(/'/g, "&#039;");
 }
 
-// Збереження ім'я користувача
+// Збереження ім'я
 const savedUser = localStorage.getItem('username');
 if (savedUser && document.getElementById("username")) {
     document.getElementById("username").value = savedUser;
@@ -170,7 +184,6 @@ document.getElementById("username")?.addEventListener("change", (e) => {
     localStorage.setItem('username', e.target.value.trim());
 });
 
-// Ініціалізація
 document.addEventListener("DOMContentLoaded", () => {
     loadPosts();
 });
